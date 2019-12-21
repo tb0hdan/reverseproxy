@@ -16,5 +16,7 @@
 
 .idea/
 
-# Artifact
+# Artifacts
 main
+reverseproxy
+
