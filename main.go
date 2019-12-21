@@ -86,16 +86,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	req := &http.Request{Method: r.Method, URL: URL}
 	req.Header = make(map[string][]string)
 
+	// Copy request headers
 	for s := range r.Header {
-		if len(s) == 0 {
-			continue
-		}
-
 		v := r.Header.Get(s)
-
-		if len(v) == 0 {
-			continue
-		}
 
 		// Skip accept-encoding as we don't support gzip yet
 		// gzip.NewReader(r)
@@ -114,7 +107,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer resp.Body.Close()
 	}
 
-	w.WriteHeader(resp.StatusCode)
+	// Copy response headers
+	for s := range resp.Header {
+		v := resp.Header.Get(s)
+		w.Header().Set(s, v)
+	}
 
 	ContentWriter(resp.Body, w)
 }
