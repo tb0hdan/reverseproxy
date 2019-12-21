@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,6 +18,13 @@ type Handler struct {
 }
 
 func  New(upstream string) *Handler{
+	_, port, err := net.SplitHostPort(upstream)
+	if err != nil && !strings.HasSuffix(err.Error(), "missing port in address"){
+		panic(err)
+	}
+	if len(port) == 0{
+		upstream = upstream + ":80"
+	}
 	return  &Handler{
 		client: http.Client{
 			Timeout:       30*time.Second,
@@ -93,7 +101,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main()  {
-	upstream := flag.String("upstream", "", "Upstream, e.g. 192.168.3.1:80")
+	upstream := flag.String("upstream", "", "HTTP upstream, e.g. 192.168.3.1:81 or just 192.168.3.1")
 	bind := flag.String("bind", "0.0.0.0:8000", "Bind addr, e.g. 0.0.0.0:8000")
 	flag.Parse()
 	if *upstream == "" {
