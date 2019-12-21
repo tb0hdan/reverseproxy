@@ -21,3 +21,7 @@ Usage of ./reverseproxy:
   -upstream string
         HTTP upstream, e.g. 192.168.3.1:81 or just 192.168.3.1
 ```
+
+## Notes
+
+Standard library (better) implementation exists: https://godoc.org/net/http/httputil#ReverseProxy

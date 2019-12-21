@@ -34,26 +34,33 @@ func New(upstream string) *Handler {
 
 	return &Handler{
 		client: http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 1 * time.Hour,
 		},
 		upstream: upstream,
 	}
 }
 
-// ContentWriter - straightforward io to io copy
-func ContentWriter(src io.Reader, dst io.Writer) {
-	p := make([]byte, 4)
-
-	for {
-		read, err := src.Read(p)
-		if err == io.EOF || read == 0 {
-			break
+func (h *Handler) CopyHeaders(src http.Header, dst http.Header) {
+	for s := range src {
+		if len(s) == 0 {
+			fmt.Println("Req key empty!")
+			continue
 		}
 
-		written, err := dst.Write(p)
-		if err == io.EOF || written == 0 {
-			break
+		v := src.Get(s)
+
+		if len(v) == 0 {
+			fmt.Println("Req val empty!")
+			continue
 		}
+
+		// Skip accept-encoding as we don't support gzip yet
+		// gzip.NewReader(r)
+		if s == "Accept-Encoding" {
+			continue
+		}
+
+		dst.Set(s, v)
 	}
 }
 
@@ -87,17 +94,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	req.Header = make(map[string][]string)
 
 	// Copy request headers
-	for s := range r.Header {
-		v := r.Header.Get(s)
-
-		// Skip accept-encoding as we don't support gzip yet
-		// gzip.NewReader(r)
-		if s == "Accept-Encoding" {
-			continue
-		}
-
-		req.Header.Set(s, v)
-	}
+	h.CopyHeaders(r.Header, req.Header)
 
 	resp, err := h.client.Do(req)
 
@@ -108,12 +105,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Copy response headers
-	for s := range resp.Header {
-		v := resp.Header.Get(s)
-		w.Header().Set(s, v)
-	}
+	h.CopyHeaders(resp.Header, w.Header())
 
-	ContentWriter(resp.Body, w)
+	written, err := io.Copy(w, resp.Body)
+	if err != nil {
+		fmt.Println(err, written)
+	}
 }
 
 func main() {
@@ -131,8 +128,8 @@ func main() {
 	srv := http.Server{
 		Addr:         *bind,
 		Handler:      handler,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 60 * time.Second,
+		ReadTimeout:  35 * time.Second,
+		WriteTimeout: 65 * time.Second,
 	}
 
 	done := make(chan os.Signal, 1)
