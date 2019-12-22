@@ -6,6 +6,9 @@ Reverse HTTP Proxy written in Go
 I've written this (very limited) reverse HTTP proxy as an excercise and reference
 for future products.
 
+Update: It appears that stdlib reversproxy allows request and response modification, but not
+different response based on request.
+
 ## Usage
 
 `make`
