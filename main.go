@@ -53,7 +53,10 @@ func (h *Handler) CopyHeaders(src http.Header, dst http.Header) {
 			fmt.Println("Req val empty!")
 			continue
 		}
-
+		// Skip Connection header: https://golang.org/src/net/http/httputil/reverseproxy.go:212
+		if s == "Connection" {
+			continue
+		}
 		// Skip accept-encoding as we don't support gzip yet
 		// gzip.NewReader(r)
 		if s == "Accept-Encoding" {
@@ -76,9 +79,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strings.HasSuffix(parsed.Path, "/") {
-		requestURI = r.RequestURI
+		requestURI = r.URL.Path
 	} else {
-		requestURI = parsed.Path + r.RequestURI
+		requestURI = parsed.Path + r.URL.Path
 	}
 
 	remoteURL := fmt.Sprintf("http://%s%s", h.upstream, requestURI)
@@ -106,6 +109,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Copy response headers
 	h.CopyHeaders(resp.Header, w.Header())
+	w.WriteHeader(resp.StatusCode)
 
 	written, err := io.Copy(w, resp.Body)
 	if err != nil {
